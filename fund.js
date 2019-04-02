@@ -1,3 +1,7 @@
-var mimetype = 'image/png'
+var mimetype = null
 
-console.log(mimetype.split('/')[1])
+if(mimetype){
+    console.log('isi')
+}else{
+    console.log('kosong')
+}
