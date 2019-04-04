@@ -4,6 +4,7 @@ var cors = require('cors')
 var app = express()
 var multer  = require('multer')
 var mysql = require('mysql')
+var fs = require('fs')
 var port = 4000
 
 const conn = mysql.createConnection({
@@ -34,13 +35,21 @@ const filterConfig = (req, file, cb) => {
 }
 
 
-
+// STORAGE UNTUK MENGATUR PENYIMPANAN DAN NAMA FILE
+// UNTUK FILTERING JENIS FILE
+// UKURAN
 var upload = multer({storage : storageConfig , fileFilter : filterConfig, limits :{fileSize : 5 * 1000000}})
+
 
 // UNTUK MEMBUAT FOLDER UPLOAD BISA DIAKSES PUBLIC
 app.use('/uploads',express.static('uploads'))
+
+// UNTUK MENERIMA DAATA DARI FE
 app.use(bodyParser.json())
+
+// CROSS ORIGIN
 app.use(cors())
+
 
 
 app.get('/', (req,res)=>{
@@ -49,7 +58,11 @@ app.get('/', (req,res)=>{
 
 
 app.post('/image',upload.single('avatar') , (req,res) => {
+
+    // REQ.FILE UNTUK MELIHAT DATA FILE YANG DIKIRIM FE
     console.log(req.file)
+
+
     var newData = JSON.parse(req.body.product)
     newData.product_image = req.file.path
     var sql = 'insert into manage_product set ?'
@@ -63,5 +76,42 @@ app.post('/images',upload.array('potoarray', 3) ,(req,res) => {
     console.log(req.files)
     res.send('sukses')
 })
+
+app.get('/getAllData' , (req,res) => {
+    var sql = `select * from manage_product`
+    conn.query(sql , (err,result) => {
+        if (err) throw err
+        res.send(result)
+    })
+})
+
+app.put('/addProduct/:bebas', upload.single('edit') , (req,res) => {
+    var id = req.params.bebas
+    if(req.file){
+        var data = JSON.parse(req.body.data)
+        var dataNew = {product_name : data.product_name , product_price  : data.harga}
+
+
+        // UNTUK MENAMBAHKAN PROPERTI BARU DI OBJECT DATA
+        // {product_name , product_price, product_image}
+        dataNew.product_image = req.file.path
+        var sql2 = `update manage_product set ? where id = ${id}`
+        conn.query(sql2, dataNew , (err,result) => {
+            if(err) throw err
+            res.send('Update Data Success')
+            fs.unlinkSync(req.body.imageBefore)
+        })
+
+    }else{
+        var sql = `update manage_product set 
+                   product_name = '${req.body.product_name}',
+                   product_price = ${req.body.harga} where id = ${id}` 
+        conn.query(sql, (err , result) => {
+            if(err) throw err
+            res.send('Edit Data Success')
+        })
+    }
+})
+
 
 app.listen(port , ()=> console.log('Berjalan di Port ' + port))
