@@ -30,7 +30,8 @@ const filterConfig = (req, file, cb) => {
     if(file.mimetype.split('/')[1] === 'png' || file.mimetype.split('/')[1] === 'jpeg'){
         cb(null, true)
     }else{
-        cb(new Error('Image must be Jpeg / Png'), false)
+        req.validation = {error : true , msg : 'File must be image'}
+        cb(null, false)
     }
 }
 
@@ -38,7 +39,7 @@ const filterConfig = (req, file, cb) => {
 // STORAGE UNTUK MENGATUR PENYIMPANAN DAN NAMA FILE
 // UNTUK FILTERING JENIS FILE
 // UKURAN
-var upload = multer({storage : storageConfig , fileFilter : filterConfig, limits :{fileSize : 5 * 1000000}})
+var upload = multer({storage : storageConfig , fileFilter : filterConfig})
 
 
 // UNTUK MEMBUAT FOLDER UPLOAD BISA DIAKSES PUBLIC
@@ -58,18 +59,36 @@ app.get('/', (req,res)=>{
 
 
 app.post('/image',upload.single('avatar') , (req,res) => {
+    try{
+        console.log(req.file)
+        if(req.validation) throw req.validation
+        if(req.file.size > 500000) throw {error : true , msg : 'Image too large'}
 
+
+
+        // REQ.QUERY  ===> http://localhost:4000/addProduct?nama=fikri
+        // REQ.PARAMS ===> http://localhost:4000/addProduct/fikri
+        // REQ.BODY   ===> axios.post('http://localhost:4000/addProduct' , {username : fikri})
+        // REQ.FILE
+
+
+
+
+        var newData = JSON.parse(req.body.product)
+        newData.product_image = req.file.path
+        var sql = 'insert into manage_product set ?'
+        conn.query(sql,newData, (err,result) => {
+            if(err) throw err
+            res.send('sukses')
+        })
+    }catch(err){
+        res.send(err)
+    }
+        
+
+   
     // REQ.FILE UNTUK MELIHAT DATA FILE YANG DIKIRIM FE
-    console.log(req.file)
-
-
-    var newData = JSON.parse(req.body.product)
-    newData.product_image = req.file.path
-    var sql = 'insert into manage_product set ?'
-    conn.query(sql,newData, (err,result) => {
-        if(err) throw err
-        res.send('sukses')
-    })
+   
 })
 
 app.post('/images',upload.array('potoarray', 3) ,(req,res) => {
